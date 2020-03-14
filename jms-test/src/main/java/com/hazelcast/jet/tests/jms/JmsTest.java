@@ -27,6 +27,7 @@ import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.jet.tests.common.AbstractSoakTest;
 import com.hazelcast.logging.ILogger;
+import org.apache.activemq.ActiveMQConnectionFactory;
 import org.apache.activemq.ActiveMQXAConnectionFactory;
 
 import javax.jms.ConnectionFactory;
@@ -109,12 +110,12 @@ public class JmsTest extends AbstractSoakTest {
         Pipeline p1 = Pipeline.create();
         p1.readFrom(Sources.jmsQueue(connectionFactory(), SOURCE_QUEUE + clusterName))
           .withoutTimestamps()
-          .writeTo(Sinks.jmsQueue(MIDDLE_QUEUE + clusterName, connectionFactory()));
+          .writeTo(Sinks.jmsQueue(MIDDLE_QUEUE + clusterName, xaConnectionFactory()));
 
         Pipeline p2 = Pipeline.create();
         p2.readFrom(Sources.jmsQueue(connectionFactory(), MIDDLE_QUEUE + clusterName))
           .withoutTimestamps()
-          .writeTo(Sinks.jmsQueue(SINK_QUEUE + clusterName, connectionFactory()));
+          .writeTo(Sinks.jmsQueue(SINK_QUEUE + clusterName, xaConnectionFactory()));
 
         JobConfig jobConfig1 = new JobConfig()
                 .setName("JMS Test source to middle queue")
@@ -175,6 +176,12 @@ public class JmsTest extends AbstractSoakTest {
     }
 
     private SupplierEx<ConnectionFactory> connectionFactory() {
+        String localBrokerURL = brokerURL;
+        return () -> new ActiveMQConnectionFactory(localBrokerURL);
+    }
+
+
+    private SupplierEx<ConnectionFactory> xaConnectionFactory() {
         String localBrokerURL = brokerURL;
         return () -> new ActiveMQXAConnectionFactory(localBrokerURL);
     }
